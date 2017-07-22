@@ -52,14 +52,16 @@ class DBOperation {
         $result = $query->get_result()->fetch_assoc();
         $query->close();
 
-        if($result['permit_status'] == 'granted' || strtotime($result['created_at']) > strtotime('-5 minutes')  && $result['permit_status'] == 'reject') {
-            $statement = $this->con->prepare("SELECT * FROM `users` WHERE (id = ? AND created_at > DATE_ADD(NOW(), INTERVAL -6 HOUR))");
-            $statement->bind_param('s', $result['user_id']);
-            $statement->execute();
-            //Getting the student result array
-            $information = $statement->get_result()->fetch_assoc();
-            $statement->close();
-            print_r($information);die;
+        if($result['permit_status'] == 'granted') {
+            if(strtotime($result['created_at']) > strtotime('-5 minutes')) {
+                $statement = $this->con->prepare("SELECT * FROM `users` WHERE (id = ? AND created_at > DATE_ADD(NOW(), INTERVAL -6 HOUR))");
+                $statement->bind_param('s', $result['user_id']);
+                $statement->execute();
+                //Getting the student result array
+                $information = $statement->get_result()->fetch_assoc();
+                $statement->close();
+                print_r($information);die;
+            }
 //            return $result;
         } else {
             print_r('Fuck off!!');die;
