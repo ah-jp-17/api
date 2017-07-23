@@ -64,7 +64,7 @@ class DBOperation {
                 $statement->close();
                 
                 $searchGCM = $this->con->prepare("SELECT gcm FROM `user_gcm_details` WHERE user_id = ?");
-                echo $result['user_id'];
+                // echo $result['user_id'];
                 $searchGCM->bind_param('s', $result['user_id']);
                 $searchGCM->execute();
                 $resultGCM = $searchGCM->get_result()->fetch_assoc();
@@ -92,7 +92,7 @@ class DBOperation {
         $searchGCM->execute();
         $resultGCM = $searchGCM->get_result()->fetch_assoc();
         $searchGCM->close();
-        echo sendNotification($resultGCM['gcm'], [
+        sendNotification($resultGCM['gcm'], [
                                            'name'=> $data['asker_id'],
                                            'id'=> $insert_id
                                            ], False);
