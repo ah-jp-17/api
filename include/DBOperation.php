@@ -6,6 +6,8 @@
  * Time: 16:57
  */
 
+include_once dirname(__FILE__) . '/fcm.php';
+
 class DBOperation {
 
     private $con;
@@ -25,7 +27,7 @@ class DBOperation {
     public function sendLocation($data) {
         $query = $this->con->prepare("INSERT INTO location_details(user_id, location, time) values(?, ?, ?)");
         $currentTime=time();
-        $query->bind_param('ssd', $data['user_id'], $data['location'], $currentTime);
+        $query->bind_param('ssd', $data['user_id'], $data['location_json'], $currentTime);
         $result = $query->execute();
         $query->close();
         if($result) {
@@ -60,7 +62,16 @@ class DBOperation {
                     array_push($result_object, $row);
                 }
                 $statement->close();
+                
+                $searchGCM = $this->con->prepare("SELECT gcm FROM `user_gcm_details` WHERE user_id = ?");
+                echo $result['user_id'];
+                $searchGCM->bind_param('s', $result['user_id']);
+                $searchGCM->execute();
+                $resultGCM = $searchGCM->get_result()->fetch_assoc();
+                $searchGCM->close();
+                sendNotification($resultGCM['gcm'], $result['asker_id'], True);
                 return $result_object;
+                return 'd';
             } else {
                 return 'wait';
             }
@@ -73,8 +84,21 @@ class DBOperation {
         $query->bind_param('ssd', $data['asker_id'], $data['user_id'], $currentTime);
         $result = $query->execute();
         $query->close();
+
+        $insert_id = $this->con->insert_id;
+
+        $searchGCM = $this->con->prepare("SELECT gcm FROM `user_gcm_details` WHERE user_id = ?");
+        $searchGCM->bind_param('s', $data['user_id']);
+        $searchGCM->execute();
+        $resultGCM = $searchGCM->get_result()->fetch_assoc();
+        $searchGCM->close();
+        echo sendNotification($resultGCM['gcm'], [
+                                           'name'=> $data['asker_id'],
+                                           'id'=> $insert_id
+                                           ], False);
+
         if($result) {
-            return $this->con->insert_id;
+            return $insert_id;
         } else {
             return False;
         }
