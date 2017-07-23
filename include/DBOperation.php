@@ -50,7 +50,7 @@ class DBOperation {
         if($result['permit_status'] == 'rejected') {
             return 'safe';
         } else {
-            if($result['permit_status'] == 'granted' || $result['time'] < strtotime('-5 minutes')) {
+            if($result['permit_status'] == 'granted' || $result['time'] < strtotime('-30 seconds')) {
                 $statement = $this->con->prepare("SELECT `location`, `time` FROM `location_details` WHERE (user_id = ? AND time > ?)");
                 $time_lower = strtotime('-6 hours');
                 $statement->bind_param('sd', $result['user_id'], $time_lower);
@@ -58,7 +58,9 @@ class DBOperation {
                 //Getting the student result array
                 $information = $statement->get_result();
                 $result_object = array();
+                $flag = False;
                 while ( $row = $information->fetch_assoc()) {
+                    $flag = true;
                     array_push($result_object, $row);
                 }
                 $statement->close();
@@ -69,9 +71,10 @@ class DBOperation {
                 $searchGCM->execute();
                 $resultGCM = $searchGCM->get_result()->fetch_assoc();
                 $searchGCM->close();
-                sendNotification($resultGCM['gcm'], $result['asker_id'], True);
+                if ($flag) {
+                    sendNotification($resultGCM['gcm'], $result['asker_id'], True);
+                }
                 return $result_object;
-                return 'd';
             } else {
                 return 'wait';
             }
@@ -92,12 +95,12 @@ class DBOperation {
         $searchGCM->execute();
         $resultGCM = $searchGCM->get_result()->fetch_assoc();
         $searchGCM->close();
-        sendNotification($resultGCM['gcm'], [
+        $response = sendNotification($resultGCM['gcm'], [
                                            'name'=> $data['asker_id'],
                                            'id'=> $insert_id
                                            ], False);
-
-        if($result) {
+        $response = json_decode($response, true);
+        if($result && $response['success']) {
             return $insert_id;
         } else {
             return False;

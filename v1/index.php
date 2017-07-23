@@ -27,11 +27,11 @@ $app->post('/sendLocation', function(ServerRequestInterface $request, ResponseIn
 
     if($result == 0) {
         $response['success'] = true;
-        $response['message'] = 'Location Send';
+        $response['message'] = 'Location sent';
         return echoResponse($response, $response_object);
     } elseif ($result == 1 ) {
         $response['success'] = false;
-        $response['message'] = 'Oops! Error occured';
+        $response['message'] = 'Location sending failed';
         return echoResponse($response, $response_object);
     } else {
         $response['success'] = false;

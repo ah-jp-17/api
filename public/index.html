@@ -1,0 +1,174 @@
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>
+      Where | Console, Uday, Console.
+    </title>
+    <style>
+      #map {
+        height: 100%;
+      }
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      .track {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      input {
+        /*background: none repeat scroll 0 0 #fff;*/
+        border: solid 1px #eee;
+        padding: 5px;
+        font-size: 1.2em;
+        display: block;
+        width: 300px;
+        margin-bottom:5px;
+      }
+      input[type='button'] {
+        background: #ccc;
+      }
+      input[type='button']:active, input[type='button']:hover {
+        background: #ddd;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="track" id="1">
+      <div class="center">
+        <input id="asker_id" type="text" placeholder="Your name" value="friend">
+        <input id="user_id" type="text" placeholder="User" value="agarwal.siddhant23@gmail.com">
+        <input type="submit" value="Track" onclick="sendLocationRequest();">
+      </div>
+    </div>
+    <div class="track" id="2" style="display:none;">
+      <div class="center" style="text-align: center;" id="2_1">
+        Please wait while we contact the user...<br>
+        00:<span id="timer">30</span>
+      </div>
+    </div>
+    <div id="map" style="display:none;"></div>
+    <script>
+      var req = new XMLHttpRequest();
+      var id, result;
+      function sendLocationRequest() {
+        var asker_id = encodeURIComponent(document.getElementById('asker_id').value);
+        var user_id = encodeURIComponent(document.getElementById('user_id').value);
+        req.abort();
+        req = new XMLHttpRequest();
+        req.onreadystatechange = function() {
+          if (req.readyState == XMLHttpRequest.DONE) {
+            var res = JSON.parse(req.responseText);
+            if (res.success) {
+              id = res.message;
+              document.getElementById('1').style.display = 'none';
+              document.getElementById('2').style.display = 'flex';
+              startTimer();
+            }
+            else
+              alert('Some error occurred');
+          }
+        }
+        req.open('POST', '/v1/fetchLocationHistory', true);
+        req.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+        req.send('asker_id='+asker_id+'&user_id='+user_id);
+      }
+      function startTimer() {
+        var time = 30;
+        var intervalTimer = setInterval(function() {
+          console.log(time);
+          if (time <= 0) {
+            clearInterval(intervalTimer);
+          }
+          if (time < 10)
+            document.getElementById('timer').innerHTML = '0'+time;
+          else
+            document.getElementById('timer').innerHTML = time;
+          time--;
+          req.abort();
+          req = new XMLHttpRequest();
+          req.onreadystatechange = function() {
+            if (req.readyState == XMLHttpRequest.DONE) {
+              console.log(req.responseText);
+              var res = JSON.parse(req.responseText);
+              if (res.success) {
+                result = res.message;
+                if (result instanceof Array) {
+                  document.getElementById('2').style.display = 'none';
+                  document.getElementById('map').style.display = 'block';
+                  clearInterval(intervalTimer);
+                  result = res.message.map((item, c) => {
+                    item_ = JSON.parse(item.location);
+                    return {
+                      lat: item_.latitude,
+                      lng: item_.longitude,
+                      speed: item_.speed,
+                      time: item.time*1000
+                    }
+                  });
+                  initMap();
+                } else {
+                  if (result == 'safe') {
+                    document.getElementById('2_1').innerHTML = 'They marked themselves as safe';
+                    clearInterval(intervalTimer);
+                  }
+                }
+              }
+              else
+                console.log('Some error occurred', res);
+            }
+          }
+          req.open('GET', '/v1/getLocation?id='+id, true);
+          req.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+          req.send(null);
+        }, 1000)
+      }
+      function initMap() {
+        var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 20,
+          center: {lat: result[result.length-1].lat, lng: result[result.length-1].lng},
+          mapTypeId: 'terrain'
+        });
+        var flightPlanCoordinates = result.map(item => ({
+          lat: item.lat,
+          lng: item.lng
+        }));
+        var flightPath = new google.maps.Polyline({
+          path: flightPlanCoordinates,
+          geodesic: true,
+          strokeColor: '#AA00FF',
+          strokeOpacity: 1.0,
+          strokeWeight: 5
+        });
+        flightPath.setMap(map);
+        console.log(result);
+        result.map((item, id) => {
+          var time = new Date(new Date(item.time).getTime());
+          time = (time.getHours() > 9 ? time.getHours() : '0' + time.getHours()) + ":" + (time.getMinutes() > 9 ? time.getMinutes() : '0' + time.getMinutes());
+          var marker = new google.maps.Marker({
+            title: time,
+            map: map,
+            position: {lat: item.lat, lng: item.lng},
+            icon: '/public/marker.png',
+          });
+          var infowindow = new google.maps.InfoWindow({
+            content: time
+          });
+          marker.addListener('click', function(item) {
+            infowindow.open(map, marker);
+          });
+          if (id == result.length - 1)
+            infowindow.open(map, marker);
+        });
+        infowindow.open(map, marker);
+        
+      }
+    </script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDZs-YejQVtG_kkGHiwT8RAaVPvD7cthVo&callback=initMap">
+    </script>
+  </body>
+</html>
