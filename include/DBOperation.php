@@ -97,7 +97,8 @@ class DBOperation {
         $searchGCM->close();
         $response = sendNotification($resultGCM['gcm'], [
                                            'name'=> $data['asker_id'],
-                                           'id'=> $insert_id
+                                           'id'=> $insert_id,
+                                           'time'=> time() + 30
                                            ], False);
         $response = json_decode($response, true);
         if($result && $response['success']) {
